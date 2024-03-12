@@ -60,37 +60,41 @@
 
 (define reports-panel (new horizontal-panel%
                            [parent frame]))
-(define text-pane (new vertical-pane%
+(define text-pane (new vertical-panel%
                        [parent reports-panel]
-                       [alignment '(left top)]))
+                       [alignment '(left top)]
+                       [min-width 250]
+                       [stretchable-width #f]
+                       [style '(border)]))
 
 (define text-count (new message%
                  [label (string-append "Count: ")]
                  [parent text-pane]
-                 [min-width 250]))
+                 [auto-resize #t]))
 (define text-mean (new message%
                  [label (string-append "Mean: ")]
                  [parent text-pane]
-                 [min-width 250]))
+                 [auto-resize #t]))
 (define text-median (new message%
                  [label (string-append "Median: ")]
                  [parent text-pane]
-                 [min-width 250])) 
+                 [auto-resize #t])) 
 (define text-mode (new message%
                  [label (string-append "Mode: ")]
                  [parent text-pane]
-                 [min-width 250]))
+                 [auto-resize #t]))
 (define text-std-dev (new message%
-                 [label (string-append "Standard Deviation: ")]
+                 [label (string-append "Std Deviation: ")]
                  [parent text-pane]
-                 [min-width 400]))
+                 [auto-resize #t]))
 
 (define graph-pane (new vertical-pane%
                         [parent reports-panel]))
 
 (define canvas (new editor-canvas%
-                    [parent graph-pane]))
-(define editor (new pasteboard%))
+                    [parent graph-pane]
+                    [style '(no-focus)]))
+(define editor (new text%))
 
 (send canvas set-editor editor)
 
@@ -102,6 +106,6 @@
          (send text-mean set-label (string-append "Mean: " (number->string (mean data))))
          (send text-median set-label (string-append "Median: " (number->string (median data))))
          (send text-mode set-label (string-append "Mode: " (string-join (map ~a (mode data)))))
-         (send text-std-dev set-label (string-append "Standard Deviation: " (number->string (stddev data))))]))
+         (send text-std-dev set-label (string-append "Std Deviation: " (number->string (stddev data))))]))
 
 (send frame show #t)
