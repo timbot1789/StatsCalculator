@@ -1,6 +1,10 @@
 #lang racket/gui
 (require racket/string racket/class math/statistics plot)
 
+(define graph-function box-and-whisker)
+(define data empty)
+(define group-size 5)
+
 (define (reduce func list)
   (if (null? list)
       (func)
@@ -39,10 +43,20 @@
                       (set! mode-list (list key))]
                      [(= value max-count)
                       (set! mode-list (cons key mode-list))])))
-  mode-list)
+  (sort mode-list <))
 
 (define (parse-numbers str)
   (map string->number (string-split (string-replace str (regexp "[^0-9 .]") ""))))
+
+(define (histogram data)
+  (discrete-histogram (hash-map (foldl
+             (lambda (val res)
+               (let* ([group (inexact->exact (quotient val group-size))]
+                      [val (hash-ref res group 0)])
+                 (hash-set res group (+ val 1))))
+             (hash)
+             data)
+            (lambda (key val) (list (format "~a - ~a" (* key group-size) (- (* group-size (+ key 1)) 1)) val)) #t)))
 
 (define frame (new frame%
                    [label "Stats Calculator"]
@@ -56,37 +70,61 @@
        [callback (lambda (text-field event)
                    (let* ([input (send text-field get-value)]
                           [vals (parse-numbers input)])
-                     (update-views (map exact->inexact(sort vals <)))))]))
+                     (set! data (map exact->inexact(sort vals <)))
+                     (update-views)))]))
 
 (define reports-panel (new horizontal-panel%
                            [parent frame]))
-(define text-pane (new vertical-panel%
+(define left-panel (new vertical-panel%
                        [parent reports-panel]
                        [alignment '(left top)]
                        [min-width 250]
                        [stretchable-width #f]
                        [style '(border)]))
 
+(define stats-panel (new vertical-panel%
+                       [parent left-panel]
+                       [min-height 250]
+                       [stretchable-height #f]
+                       [alignment '(left top)]
+                       [style '(border)]))
+
 (define text-count (new message%
                  [label (string-append "Count: ")]
-                 [parent text-pane]
+                 [parent stats-panel]
                  [auto-resize #t]))
 (define text-mean (new message%
                  [label (string-append "Mean: ")]
-                 [parent text-pane]
+                 [parent stats-panel]
                  [auto-resize #t]))
 (define text-median (new message%
                  [label (string-append "Median: ")]
-                 [parent text-pane]
+                 [parent stats-panel]
                  [auto-resize #t])) 
 (define text-mode (new message%
                  [label (string-append "Mode: ")]
-                 [parent text-pane]
+                 [parent stats-panel]
                  [auto-resize #t]))
 (define text-std-dev (new message%
                  [label (string-append "Std Deviation: ")]
-                 [parent text-pane]
+                 [parent stats-panel]
                  [auto-resize #t]))
+
+(define controls-panel (new vertical-panel%
+                       [parent left-panel]
+                       [alignment '(left top)]))
+(define graph-select (new choice%
+                          [label "Graph type:"]
+                          [choices '("box and whiskers" "histogram")]
+                          [parent controls-panel]
+                          [callback (lambda (choice event)
+                                      (cond
+                                        [(= (send choice get-selection) 0)
+                                         (set! graph-function box-and-whisker)
+                                         (draw-graph data graph-function)]
+                                        [(= (send choice get-selection) 1)
+                                         (set! graph-function histogram)
+                                         (draw-graph data graph-function)]))]))
 
 (define graph-pane (new vertical-pane%
                         [parent reports-panel]))
@@ -98,14 +136,17 @@
 
 (send canvas set-editor editor)
 
-(send editor insert (plot-snip (function sin (- pi) pi #:label "y = sin(x)")))
-
-(define (update-views data)
+(define (update-views)
   (cond [(> (length data) 0) 
          (send text-count set-label (string-append "Count: " (number->string (length data))))
          (send text-mean set-label (string-append "Mean: " (number->string (mean data))))
          (send text-median set-label (string-append "Median: " (number->string (median data))))
          (send text-mode set-label (string-append "Mode: " (string-join (map ~a (mode data)))))
-         (send text-std-dev set-label (string-append "Std Deviation: " (number->string (stddev data))))]))
+         (send text-std-dev set-label (string-append "Std Deviation: " (number->string (stddev data))))
+         (draw-graph data graph-function)]))
+
+(define (draw-graph data graph-function)
+  (send editor delete 'start)
+  (send editor insert (plot-snip (graph-function data))))
 
 (send frame show #t)
