@@ -113,6 +113,7 @@
 (define controls-panel (new vertical-panel%
                        [parent left-panel]
                        [alignment '(left top)]))
+
 (define graph-select (new choice%
                           [label "Graph type:"]
                           [choices '("box and whiskers" "histogram")]
@@ -121,10 +122,32 @@
                                       (cond
                                         [(= (send choice get-selection) 0)
                                          (set! graph-function box-and-whisker)
+                                         (send graph-controls change-children (lambda (a-list) (list box-and-whisker-controls)))
                                          (draw-graph data graph-function)]
                                         [(= (send choice get-selection) 1)
                                          (set! graph-function histogram)
+                                         (send graph-controls change-children (lambda (a-list) (list histogram-controls)))
                                          (draw-graph data graph-function)]))]))
+
+(define graph-controls (new vertical-panel%
+                            [parent controls-panel]))
+(define histogram-controls (new vertical-panel%
+                                [parent graph-controls]))
+(define histogram-group-size-input
+  (new text-field%
+       [label "Set group size"]
+       [parent histogram-controls]
+       [init-value (number->string group-size)]
+       [callback (lambda (text-field event)
+                   (let* ([input (send text-field get-value)]
+                          [val (cond [(empty? (parse-numbers input)) 1]
+                                     [(> 1 (first (parse-numbers input))) 1]
+                                     [else (first (parse-numbers input))])])
+                     (set! group-size val)
+                     (update-views)))]))
+
+(define box-and-whisker-controls (new vertical-panel%
+                                      [parent graph-controls]))
 
 (define graph-pane (new vertical-pane%
                         [parent reports-panel]))
@@ -132,6 +155,7 @@
 (define canvas (new editor-canvas%
                     [parent graph-pane]
                     [style '(no-focus)]))
+
 (define editor (new text%))
 
 (send canvas set-editor editor)
@@ -146,7 +170,10 @@
          (draw-graph data graph-function)]))
 
 (define (draw-graph data graph-function)
-  (send editor delete 'start)
-  (send editor insert (plot-snip (graph-function data))))
+  (cond [(not (empty? data))
+       (send editor delete 'start)
+       (send editor insert (plot-snip (graph-function data)))]))
+
+(send graph-controls change-children (lambda (a-list) (list box-and-whisker-controls)))
 
 (send frame show #t)
