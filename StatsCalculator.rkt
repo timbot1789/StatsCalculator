@@ -1,5 +1,5 @@
 #lang racket/gui
-(require racket/string racket/class)
+(require racket/string racket/class math/statistics plot)
 
 (define (reduce func list)
   (if (null? list)
@@ -58,28 +58,50 @@
                           [vals (parse-numbers input)])
                      (update-views (map exact->inexact(sort vals <)))))]))
 
+(define reports-panel (new horizontal-panel%
+                           [parent frame]))
+(define text-pane (new vertical-pane%
+                       [parent reports-panel]
+                       [alignment '(left top)]))
 
 (define text-count (new message%
                  [label (string-append "Count: ")]
-                 [parent frame]
+                 [parent text-pane]
                  [min-width 250]))
 (define text-mean (new message%
                  [label (string-append "Mean: ")]
-                 [parent frame]
+                 [parent text-pane]
                  [min-width 250]))
 (define text-median (new message%
                  [label (string-append "Median: ")]
-                 [parent frame]
+                 [parent text-pane]
                  [min-width 250])) 
 (define text-mode (new message%
                  [label (string-append "Mode: ")]
-                 [parent frame]
+                 [parent text-pane]
                  [min-width 250]))
+(define text-std-dev (new message%
+                 [label (string-append "Standard Deviation: ")]
+                 [parent text-pane]
+                 [min-width 400]))
+
+(define graph-pane (new vertical-pane%
+                        [parent reports-panel]))
+
+(define canvas (new editor-canvas%
+                    [parent graph-pane]))
+(define editor (new pasteboard%))
+
+(send canvas set-editor editor)
+
+(send editor insert (plot-snip (function sin (- pi) pi #:label "y = sin(x)")))
 
 (define (update-views data)
-  (send text-count set-label (string-append "Count: " (number->string (length data))))
-  (send text-mean set-label (string-append "Mean: " (number->string (mean data))))
-  (send text-median set-label (string-append "Median: " (number->string (median data))))
-  (send text-mode set-label (string-append "Mode: " (string-join (map ~a (mode data))))))
+  (cond [(> (length data) 0) 
+         (send text-count set-label (string-append "Count: " (number->string (length data))))
+         (send text-mean set-label (string-append "Mean: " (number->string (mean data))))
+         (send text-median set-label (string-append "Median: " (number->string (median data))))
+         (send text-mode set-label (string-append "Mode: " (string-join (map ~a (mode data)))))
+         (send text-std-dev set-label (string-append "Standard Deviation: " (number->string (stddev data))))]))
 
 (send frame show #t)
